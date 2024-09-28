@@ -18,9 +18,12 @@ fn main() {
 // choosing music file input
     let mut input = String::new().to_string();
     println!("please input songname: ");
-    io::stdin().read_line(&mut input).expect("error: unable to read user input");
-    println!("{input}");
-    println!("{input} is playing... ");
+    let input_read_result = io::stdin().read_line(&mut input);
+    let file = match input_read_result {
+        Ok(input) => input.to_string(),
+        Err(error) => return println!("{}", error),
+    };
+
     ///let rem_last = |value: &str| -> &str {
        /// let mut chars = value.chars();
         ///chars.next_back();
@@ -34,11 +37,16 @@ fn main() {
     let sink = Sink::try_new(&stream_handle).unwrap();
 
 // Load a sound from a file, using a path relative to Cargo.toml
-    rem_last(input.as_str());
-    let mut trimmedinput = input.trim().to_string();
-    let file = BufReader::new(File::open(format!("songs/{trimmedinput}.mp3")).unwrap());
-    print!("{input}");
-// Decode that sound file into a source
+    rem_last(input.to_string().as_str());
+    let mut trimmed_input = input.to_string().trim().to_string();
+    let trimmed_input_result = File::open(format!("songs/{trimmed_input}.mp3"));
+    let file = match trimmed_input_result {
+        Ok(trimmed_input) => trimmed_input,
+        Err(error) => return println!("{}", error),
+    };
+    println!("{input} is playing... ");
+
+    // Decode that sound file into a source
     let source = Decoder::new(file).unwrap();
 // Play the sound directly on the device
     stream_handle.play_raw(source.convert_samples());
