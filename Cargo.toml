@@ -6,3 +6,5 @@ edition = "2021"
 [dependencies]
 alsa = "0.9.1"
 rodio = "0.18.1"
+termion = "4.0.2"
+log = "0.4.21"
