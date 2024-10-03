@@ -9,6 +9,7 @@ use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use log::error;
+use termion::clear;
 
 fn rem_last(value: &str) -> &str {
     let mut chars = value.chars();
@@ -16,66 +17,11 @@ fn rem_last(value: &str) -> &str {
     chars.as_str()
 }
 
-fn play_song(f: Decoder<File>) {
-
+fn idle(active: bool){
+    // choosing music file input
     // Get an output stream handle to the default physical sound device
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     let sink = Sink::try_new(&stream_handle).unwrap();
-
-    // Play the sound directly on the device
-
-    sink.append(f);
-
-    //sink.sleep_until_end();
-
-    let mut active = true;
-    let mut paused = false;
-
-    while active == true {
-        let stdin = stdin();
-        //setting up stdout and going into raw mode
-        let mut stdout = stdout().into_raw_mode().unwrap();
-        //printing welcoming message, clearing the screen and going to left top corner with the cursor
-        write!(stdout, r#"{}{}ctrl + q to exit, ctrl + h to print "Hello world!", alt + t to print "termion is cool""#, termion::cursor::Goto(1, 1), termion::clear::All)
-            .unwrap();
-        stdout.flush().unwrap();
-
-        for c in stdin.keys() {
-            //clearing the screen and going to top left corner
-            write!(
-                stdout,
-                "{}{}",
-                termion::cursor::Goto(1, 1),
-                termion::clear::All
-            )
-                .unwrap();
-
-            //i reckon this speaks for itself
-            match c.unwrap() {
-                Key::Char('k') => {if paused == true{
-                    sink.pause(); paused = false;
-                }
-                    else {
-                        sink.play(); paused = true;
-                    }
-                },
-                Key::Backspace => {active = false; break},
-                //Key::Alt('t') => println!("termion is cool"),
-                _ => (),
-            }
-
-            stdout.flush().unwrap();
-    }
-
-
-    // The sound plays in a separate audio thread,
-    // so we need to keep the main thread alive while it's playing.
-    std::thread::sleep(std::time::Duration::from_secs(150));
-
-}}
-
-fn main() {
-    // choosing music file input
     let mut input = String::new().to_string();
     println!("please input song name: ");
     //TODO: list multiple songs in dir
@@ -114,9 +60,68 @@ fn main() {
     };
 
 
-    play_song(source)
+    play_song(source,sink,active);
+
+
+}
+
+fn play_song(f: Decoder<File>, sink: Sink, mut active: bool) {
 
 
 
 
+    // append sound to sink and play
+
+    sink.append(f);
+
+    //sink.sleep_until_end();
+    let mut paused = false;
+
+    let mut sink_state = sink.empty();
+
+
+        let stdin = stdin();
+        //setting up stdout and going into raw mode
+        let mut stdout = stdout().into_raw_mode().unwrap();
+        //printing welcoming message, clearing the screen and going to left top corner with the cursor
+        //write!(stdout,, termion::cursor::Goto(1, 1))
+        //.unwrap();
+        println!("Song is now playing.");
+        println!("Press K to pause and resume, Ctrl + q to quit.");
+        stdout.flush().unwrap();
+
+        for c in stdin.keys() {
+            //clearing the screen and going to top left corner
+
+            //i reckon this speaks for itself
+            match c.unwrap() {
+                Key::Char('k') => {
+                    if paused == true {
+                        sink.pause();
+                        paused = false;
+                    } else {
+                        sink.play();
+                        paused = true;
+                    }
+                },
+                Key::Ctrl('q') => panic!(),
+
+                        //figure out how to go back to main func from func
+                Key::Ctrl('x') => {println!("{}", clear::All); active = true;return();},
+                _ => (),
+            }
+
+            //stdout.flush().unwrap();
+        }
+
+    }
+
+
+
+fn main() {
+    let mut active = true;
+
+    while active == true {
+        idle(active);
+    }
 }
