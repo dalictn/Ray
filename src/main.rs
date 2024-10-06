@@ -10,6 +10,7 @@ use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use log::error;
 use termion::clear;
+use std::{fs::read_dir, path::{Path, PathBuf}};
 
 fn rem_last(value: &str) -> &str {
     let mut chars = value.chars();
@@ -17,7 +18,7 @@ fn rem_last(value: &str) -> &str {
     chars.as_str()
 }
 
-fn idle(active: bool){
+fn idle(active: bool) {
     // choosing music file input
     // Get an output stream handle to the default physical sound device
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
@@ -50,6 +51,7 @@ fn idle(active: bool){
     let mut playing_song: bool = false;
     println!("{input} is playing... ");
     //TODO: Add keyboard input for song controls
+
 
     // Decode that sound file into a source
     let source_result = Decoder::new(file);
@@ -116,12 +118,43 @@ fn play_song(f: Decoder<File>, sink: Sink, mut active: bool) {
 
     }
 
+fn recurse_files(path: impl AsRef<Path>) -> std::io::Result<Vec<PathBuf>> {
+    let mut buf = vec![];
+    let entries = read_dir(path)?;
+
+    for entry in entries {
+        let entry = entry?;
+        let meta = entry.metadata()?;
+
+        if meta.is_dir() {
+            let mut subdir = recurse_files(entry.path())?;
+            buf.append(&mut subdir);
+        }
+
+        if meta.is_file() {
+            buf.push(entry.path());
+        }
+    }
+
+    Ok(buf)
+}
+
+fn loader(song_list: Vec<PathBuf>) {
+    // TOOD: take song list, load one file into source, append to sink, and then loop and load next source until finished
+
+}
+
 
 
 fn main() {
-    let mut active = true;
+    let mut active = false;
+    let mut path: &str = "songs/";
 
+    let files  = recurse_files(path).unwrap();
     while active == true {
         idle(active);
     }
+    //println!("{:?}", files);
+
+
 }
