@@ -61,9 +61,12 @@ fn idle(active: bool) {
         Err(error) => return println!("{}", error),
     };
 
+    let mut path: &str = "songs/";
 
-    play_song(source,sink,active);
+    let files  = recurse_files(path).unwrap();
 
+    //play_song(source,sink,active);
+    play_songs(files,sink,active);
 
 }
 
@@ -117,6 +120,59 @@ fn play_song(f: Decoder<File>, sink: Sink, mut active: bool) {
         }
 
     }
+fn play_songs(l: Vec<PathBuf>, sink: Sink, mut active: bool) {
+    //TODO: clean up and fix keybinds. Keep sink state and loop back to menu when finished. Polish up
+    for entry in l {
+        let file = File::open(entry).unwrap();
+        let source = Decoder::new(file).unwrap();
+        sink.append(source);
+    }
+
+    while sink.empty() == false {
+        let mut paused = false;
+
+        let stdin = stdin();
+        //setting up stdout and going into raw mode
+        let mut stdout = stdout().into_raw_mode().unwrap();
+        //printing welcoming message, clearing the screen and going to left top corner with the cursor
+        //write!(stdout,, termion::cursor::Goto(1, 1))
+        //.unwrap();
+        println!("Song is now playing.");
+        println!("Press K to pause and resume, Ctrl + q to quit.");
+        stdout.flush().unwrap();
+
+        for c in stdin.keys() {
+            //clearing the screen and going to top left corner
+
+            //i reckon this speaks for itself
+            match c.unwrap() {
+                Key::Char('k') => {
+                    if paused == true {
+                        sink.pause();
+                        paused = false;
+                    } else {
+                        sink.play();
+                        paused = true;
+                    }
+                },
+                Key::Ctrl('q') => panic!(),
+                Key::Ctrl('n') => sink.skip_one(),
+
+
+                //figure out how to go back to main func from func
+                Key::Ctrl('x') => {println!("{}", clear::All); active = true;return();},
+                _ => (),
+            }
+
+            //stdout.flush().unwrap();
+        }
+
+        sink.sleep_until_end();
+    }
+
+
+}
+
 
 fn recurse_files(path: impl AsRef<Path>) -> std::io::Result<Vec<PathBuf>> {
     let mut buf = vec![];
@@ -139,21 +195,15 @@ fn recurse_files(path: impl AsRef<Path>) -> std::io::Result<Vec<PathBuf>> {
     Ok(buf)
 }
 
-fn loader(song_list: Vec<PathBuf>) {
-    // TOOD: take song list, load one file into source, append to sink, and then loop and load next source until finished
-
-}
 
 
 
 fn main() {
-    let mut active = false;
-    let mut path: &str = "songs/";
+    let mut active = true;
 
-    let files  = recurse_files(path).unwrap();
-    while active == true {
+    //while active == true {
         idle(active);
-    }
+    //}
     //println!("{:?}", files);
 
 
