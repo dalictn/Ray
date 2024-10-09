@@ -4,11 +4,9 @@ use std::fs::File;
 use std::io;
 use std::io::BufReader;
 use std::io::*;
-use std::str::Chars;
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
-use log::error;
 use termion::clear;
 use std::{fs::read_dir, path::{Path, PathBuf}};
 

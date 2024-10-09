@@ -7,8 +7,6 @@ name = "Ray"
 version = "0.1.0"
 dependencies = [
  "alsa",
- "glob",
- "log",
  "rodio",
  "termion",
 ]
