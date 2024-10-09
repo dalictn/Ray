@@ -29,40 +29,29 @@ fn idle(mut active: bool) {
     let stdin = stdin();
     //setting up stdout and going into raw mode
     let mut stdout = stdout().into_raw_mode().unwrap();
+    writeln!(stdout, "{}{}", clear::All, termion::cursor::Goto(1, 1)).unwrap();
 
 
-    writeln!(stdout , "[o] load ../songs/").unwrap();
-    writeln!(stdout, "[s] load track").unwrap();
+    writeln!(stdout , "[o] load ../songs/\n [s] load track").unwrap();
+    //writeln!(stdout, "[s] load track").unwrap();
 
     for c in std::io::stdin().keys() {
-        //clearing the screen and going to top left corner
 
         //i reckon this speaks for itself
         match c.unwrap() {
-            Key::Char('o') => {println!("{}", clear::All); play_songs(&sink, active, path)},
+            Key::Char('o') => {println!("{}", clear::All); play_songs(&sink, active, path);break;},
 
             Key::Ctrl('q') => panic!(),
 
             //figure out how to go back to main func from func
-            Key::Char('s') => {println!("{}", clear::All);stdout.suspend_raw_mode().unwrap(); play_song(&sink, &active, &mut stdout);},
+            Key::Char('s') => {println!("{}", clear::All);stdout.suspend_raw_mode().unwrap();play_song(&sink, &active, &mut stdout);break;},
             _ => (),
         }}
 
 
     // Load a sound from a file, using a path relative to Cargo.toml
     let mut trimmed_input = input.to_string().trim().to_string();
-    //let file = match trimmed_input_result {
-        //Ok(trimmed_input) => trimmed_input,
-        //Err(error) => return println!("{}", error),
-    //};
-
     let mut playing_song: bool = false;
-
-    // Decode that sound file into a source
-
-
-    //play_song(source,sink,active);
-    //play_songs(files,sink,active);
 
 }
 
@@ -88,20 +77,13 @@ fn play_song(sink: &Sink, mut active: &bool, stdout: &mut RawTerminal<Stdout>) {
 
     let mut sink_state = sink.empty();
 
-
-
-        //printing welcoming message, clearing the screen and going to left top corner with the cursor
-        //write!(stdout,, termion::cursor::Goto(1, 1))
-        //.unwrap();
         println!("Song is now playing.");
         println!("Press K to pause and resume, Ctrl + q to quit.");
         stdout.flush().unwrap();
         stdout.activate_raw_mode().unwrap();
 
         for c in stdin().keys() {
-            //clearing the screen and going to top left corner
 
-            //i reckon this speaks for itself
             match c.unwrap() {
                 Key::Char('k') => {
                     if paused == true {
@@ -114,20 +96,15 @@ fn play_song(sink: &Sink, mut active: &bool, stdout: &mut RawTerminal<Stdout>) {
                 },
                 Key::Ctrl('q') => panic!(),
 
-                        //figure out how to go back to main func from func
                 Key::Ctrl('x') => {println!("{}", clear::All); active = &true;return;},
                 _ => (),
             }
-
-            //stdout.flush().unwrap();
         }
 
     }
 fn play_songs(sink: &Sink, mut active: bool, path: &str) {
-    //TODO: clean up and fix keybinds. Keep sink state and loop back to menu when finished. Polish up
 
     let list = recurse_files(path).unwrap();
-
 
 
     for entry in list {
@@ -136,23 +113,15 @@ fn play_songs(sink: &Sink, mut active: bool, path: &str) {
         sink.append(source);
     }
 
-    while sink.empty() == false {
         let mut paused = false;
 
         let stdin = stdin();
-        //setting up stdout and going into raw mode
         let mut stdout = stdout().into_raw_mode().unwrap();
-        //printing welcoming message, clearing the screen and going to left top corner with the cursor
-        //write!(stdout,, termion::cursor::Goto(1, 1))
-        //.unwrap();
         println!("Song is now playing.");
         println!("Press K to pause and resume, Ctrl + q to quit.");
         stdout.flush().unwrap();
 
         for c in stdin.keys() {
-            //clearing the screen and going to top left corner
-
-            //i reckon this speaks for itself
             match c.unwrap() {
                 Key::Char('k') => {
                     if paused == true {
@@ -167,19 +136,16 @@ fn play_songs(sink: &Sink, mut active: bool, path: &str) {
                 Key::Ctrl('n') => sink.skip_one(),
 
 
-                //figure out how to go back to main func from func
-                Key::Ctrl('x') => {println!("{}", clear::All); active = true;return();},
+                Key::Ctrl('x') => {
+                    stdout.suspend_raw_mode().unwrap();
+                    active = true;
+                    return;
+                },
                 _ => (),
             }
-
-            //stdout.flush().unwrap();
         }
-
-        sink.sleep_until_end();
     }
 
-
-}
 
 
 fn recurse_files(path: impl AsRef<Path>) -> std::io::Result<Vec<PathBuf>> {
@@ -214,7 +180,6 @@ fn main() {
     while active == true {
         idle(active);
     }
-    //println!("{:?}", files);
 
 
 }
