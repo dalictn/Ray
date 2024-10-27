@@ -1,10 +1,12 @@
+use rodio::queue::queue;
 use rodio::source::{SineWave, Source};
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{queue, Decoder, OutputStream, Sink};
 use std::fs::File;
 use std::io;
 use std::io::BufReader;
 use std::io::*;
 use std::ops::Index;
+use std::{collections::VecDeque, io::stdin};
 use std::{
     fs::read_dir,
     path::{Path, PathBuf},
@@ -21,13 +23,14 @@ fn rem_last(value: &str) -> &str {
 }
 
 fn strip_playlist(mut list: Vec<String>) -> Vec<String> {
+    //strip playlist vector. This vec is planned to be used alongside sink.queue to hopefully mirror the current queue and be used as a playlist basically
+
     for mut item in list.iter_mut() {
-    //item.to_string().replace(".mp3", "");
-    *item = item.replace("songs/", "").to_string();
-        }
+        //item.to_string().replace(".mp3", "");
+        *item = item.replace("songs/", "").to_string();
+    }
     list
 }
-
 
 fn idle(mut active: bool) {
     // choosing music file input
@@ -50,6 +53,7 @@ fn idle(mut active: bool) {
         match c.unwrap() {
             Key::Char('o') => {
                 println!("{}", clear::All);
+                stdout.suspend_raw_mode().unwrap();
                 play_songs(&sink, active, path, paused);
                 break;
             }
@@ -114,27 +118,41 @@ fn play_song(sink: &Sink, mut active: &bool, stdout: &mut RawTerminal<Stdout>, m
 }
 fn play_songs(sink: &Sink, mut active: bool, path: &str, mut paused: bool) {
     let list = recurse_files(path).unwrap();
-    let mut playlist: Vec<String> = Vec::new();
-    for entry in list {
+    let mut playlist: VecDeque<PathBuf> = VecDeque::new();
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+
+    let indices: Vec<_> = input
+        .trim()
+        .split(',')
+        .flat_map(|s| s.trim().parse::<usize>().ok())
+        .filter(|&idx| idx > 0 && idx <= list.len())
+        .map(|idx| list[idx - 1].clone())
+        .collect();
+        playlist = indices.into();
+
+
+    for entry in &playlist {
         let file = File::open(&entry).unwrap();
         let source = Decoder::new(file).unwrap();
         sink.append(source);
-        let mut entry_string = entry.display().to_string();
-        playlist.push(entry_string);
+    //let mut entry_string = entry.display().to_string();
+    //playlist.push(entry_string);
     }
 
     //let playlist = strip_playlist(playlist);
 
     //for mut item in playlist.iter_mut() {
-        //item.to_string().replace(".mp3", "");
-         //*item = item.replace("songs/", "").to_string();
+    //item.to_string().replace(".mp3", "");
+    //*item = item.replace("songs/", "").to_string();
     //}
-    let playlist = strip_playlist(playlist);
+    //todo: figure out how structs work and use rodio::queue instead of this garbage
+    //let playlist = strip_playlist(playlist);
     //println!("{:?}", playlist);
-
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
-    println!("Currently queued: ");
+    println!("songs queued: ");
     println!("{:?}", playlist);
     //println!("{}", sink.queue());
     println!("Press K to pause and resume, Ctrl + q to quit. Ctrl + n for next song in queue");
@@ -151,7 +169,7 @@ fn play_songs(sink: &Sink, mut active: bool, path: &str, mut paused: bool) {
                     paused = true;
                 }
             }
-            Key::Ctrl('q') => panic!(),
+            Key::Ctrl('c') => panic!(),
             Key::Ctrl('n') => sink.skip_one(),
 
             Key::Ctrl('x') => {
@@ -161,8 +179,8 @@ fn play_songs(sink: &Sink, mut active: bool, path: &str, mut paused: bool) {
             }
             _ => (),
         }
-    }
-}
+    }}
+
 
 fn recurse_files(path: impl AsRef<Path>) -> std::io::Result<Vec<PathBuf>> {
     let mut buf = vec![];
