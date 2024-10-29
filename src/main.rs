@@ -3,7 +3,6 @@ use rodio::source::{SineWave, Source};
 use rodio::{queue, Decoder, OutputStream, Sink};
 use std::fs::File;
 use std::io;
-use std::io::BufReader;
 use std::io::*;
 use std::ops::Index;
 use std::{collections::VecDeque, io::stdin};
@@ -45,7 +44,7 @@ fn idle(mut active: bool) {
     let mut stdout = stdout().into_raw_mode().unwrap();
     writeln!(stdout, "{}{}", clear::All, termion::cursor::Goto(1, 1)).unwrap();
 
-    writeln!(stdout, "[o] load ../songs/\n [s] load track").unwrap();
+    writeln!(stdout, "[o] load ../songs/\r\n[s] load track\r").unwrap();
     //writeln!(stdout, "[s] load track").unwrap();
     let mut paused = false;
 
@@ -75,6 +74,7 @@ fn idle(mut active: bool) {
 
 fn play_song(sink: &Sink, mut active: &bool, stdout: &mut RawTerminal<Stdout>, mut paused: &bool) {
     let mut track = String::new().to_string();
+    //todo: Change input method to use indices or add autocompletion as typing the song name will be tedious
     println!("Please enter file name: songs/...");
     let untrimmed_track = io::stdin().read_line(&mut track).unwrap();
     let track = rem_last(&track);
@@ -89,8 +89,8 @@ fn play_song(sink: &Sink, mut active: &bool, stdout: &mut RawTerminal<Stdout>, m
 
     let mut sink_state = sink.empty();
 
-    println!("Song is now playing.");
-    println!("Press K to pause and resume, Ctrl + q to quit.");
+    println!("Song is now playing.\r");
+    println!("Press K to pause and resume, Ctrl + q to quit.\r");
     stdout.flush().unwrap();
     stdout.activate_raw_mode().unwrap();
 
@@ -130,6 +130,8 @@ fn play_songs(sink: &Sink, mut active: bool, path: &str, mut paused: bool) {
         view_list.push(entry_string);
     }
 
+    //todo: extend file support to beyond mp3s. This will probably have to be rewritten in future
+    //Strip file names of directory and extension
     for mut item in view_list.iter_mut() {
         *item = item.to_string().replace(".mp3", "");
         *item = item.replace("songs/", "").to_string();
@@ -145,43 +147,41 @@ fn play_songs(sink: &Sink, mut active: bool, path: &str, mut paused: bool) {
         el.insert_str(0, &index_braces);
     }
 
-    println!(
-        "List of found songs; Enter the indices of the song you'd like to queue: {:?}",
-        view_list
-    );
+    println!("List of found songs; Enter the indices of the song(s) you'd like to queue: \r");
+    println!("{:?}", view_list);
 
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
 
-    let indices: Vec<_> = input
-        .trim()
-        .split(',')
-        .flat_map(|s| s.trim().parse::<usize>().ok())
-        .filter(|&idx| idx > 0 && idx <= list.len())
-        .map(|idx| list[idx - 1].clone())
-        .collect();
-    list = indices.into();
+    //todo: Add all option to queue all songs
+    if input == "all" {
+        list = list.clone();
+        list = list.into()
+    } else {
+        let indices: Vec<_> = input
+            .trim()
+            .split(',')
+            .flat_map(|s| s.trim().parse::<usize>().ok())
+            .filter(|&idx| idx > 0 && idx <= list.len())
+            .map(|idx| list[idx - 1].clone())
+            .collect();
+        list = indices.into();
+    }
 
+    //For each path in the list found, append to sink
     for entry in list {
         let file = File::open(&entry).unwrap();
         let source = Decoder::new(file).unwrap();
         sink.append(source);
-        let mut entry_string = entry.display().to_string();
+        let entry_string = entry.display().to_string();
         playlist.insert(0, entry_string);
     }
 
-    //let playlist = strip_playlist(playlist);
-    //strip playlist of dir and file extensions
-
-    //todo: figure out how structs work and use rodio::queue instead of this garbage
-    //let playlist = strip_playlist(playlist);
-    //println!("{:?}", playlist);
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
-    println!("songs queued: ");
-    println!("{:?}", playlist);
-    //println!("{}", sink.queue());
-    println!("Press K to pause and resume, Ctrl + c to quit. Ctrl + n for next song in queue");
+    println!("songs queued: \r");
+    println!("{:?}\r", playlist);
+    println!("Press K to pause and resume, Ctrl + c to quit. Ctrl + n for next song in queue\r");
     stdout.flush().unwrap();
 
     for c in stdin.keys() {
