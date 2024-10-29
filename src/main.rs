@@ -131,7 +131,7 @@ fn play_songs(sink: &Sink, mut active: bool, path: &str, mut paused: bool) {
     }
 
     for mut item in view_list.iter_mut() {
-        item.to_string().replace(".mp3", "");
+        *item = item.to_string().replace(".mp3", "");
         *item = item.replace("songs/", "").to_string();
     }
 
@@ -139,7 +139,10 @@ fn play_songs(sink: &Sink, mut active: bool, path: &str, mut paused: bool) {
     for (i, el) in view_list.iter_mut().enumerate() {
         let i = i + 1;
         let ind_char = char::from_digit(i as u32, 10).unwrap();
-        el.push(ind_char);
+        let mut index_braces: String = String::from("[] ");
+        index_braces.insert(1, ind_char);
+
+        el.insert_str(0, &index_braces);
     }
 
     println!(
@@ -164,7 +167,7 @@ fn play_songs(sink: &Sink, mut active: bool, path: &str, mut paused: bool) {
         let source = Decoder::new(file).unwrap();
         sink.append(source);
         let mut entry_string = entry.display().to_string();
-        playlist.push(entry_string);
+        playlist.insert(0, entry_string);
     }
 
     //let playlist = strip_playlist(playlist);
